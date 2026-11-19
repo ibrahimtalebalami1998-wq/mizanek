@@ -1,13 +1,6 @@
 <!DOCTYPE html>
 <html>
-<head><script>/* temporary iPhone diagnostics: kept on this device only, shown by diag.html */(function(){var K='__mblog';function add(l,a){try{var x=JSON.parse(localStorage.getItem(K)||'[]');x.push(new Date().toISOString().slice(11,23)+' '+l+' '+Array.prototype.map.call(a,function(v){try{return typeof v==='string'?v:(v&&v.stack)||JSON.stringify(v)}catch(e){return String(v)}}).join(' ').slice(0,1500));if(x.length>600)x=x.slice(-600);localStorage.setItem(K,JSON.stringify(x))}catch(e){}}
-['log','info','warn','error','debug'].forEach(function(l){var o=console[l];console[l]=function(){add(l,arguments);return o.apply(console,arguments)}});
-window.addEventListener('error',function(e){add('uncaught',[e.message+' @'+e.filename+':'+e.lineno])});
-window.addEventListener('unhandledrejection',function(e){add('rejection',[String(e.reason&&(e.reason.stack||e.reason))])});
-window.addEventListener('pagehide',function(e){add('pagehide',['persisted='+e.persisted])});
-window.addEventListener('pageshow',function(e){add('pageshow',['persisted='+e.persisted])});
-var t0=Date.now();var h=setInterval(function(){var n=document.querySelector('flt-semantics-host,flt-glass-pane');add('tick',[Math.round((Date.now()-t0)/1000)+'s flutter='+(!!n)+' vis='+document.visibilityState]);try{navigator.locks.query().then(function(q){add('locks',[JSON.stringify({held:(q.held||[]).map(function(l){return l.name+'/'+l.mode+'/'+String(l.clientId).slice(0,8)}),pending:(q.pending||[]).map(function(l){return l.name+'/'+l.mode+'/'+String(l.clientId).slice(0,8)})})])})}catch(e){add('locks',['err '+e])}if(Date.now()-t0>30000)clearInterval(h)},5000);
-add('page',[location.href.replace(/code=[^&]+/,'code=…')+' standalone='+navigator.standalone]);})();</script>
+<head>
   <!-- Replaced by `flutter build web --base-href`. -->
   <base href="/mizanek/app/">
 
