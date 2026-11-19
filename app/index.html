@@ -31,6 +31,30 @@ add('page',[location.href.replace(/code=[^&]+/,'code=…')+' standalone='+naviga
   <style>html, body { margin: 0; background: #18181C; }</style>
 </head>
 <body>
+  <script>
+    // Safari freezes a page it keeps for Back with its workers and their Web
+    // Locks still held, so the next page waits forever on the database lock.
+    (function () {
+      var workers = [];
+      var NativeWorker = window.Worker;
+      // Same Worker, only remembered, so pagehide can end it.
+      window.Worker = function (url, options) {
+        var worker = new NativeWorker(url, options);
+        workers.push(worker);
+        return worker;
+      };
+      window.Worker.prototype = NativeWorker.prototype;
+      // Ending a worker releases every lock it holds, at once.
+      window.addEventListener('pagehide', function () {
+        workers.forEach(function (worker) { worker.terminate(); });
+        workers = [];
+      });
+      // A page shown again from the cache has no database worker left.
+      window.addEventListener('pageshow', function (event) {
+        if (event.persisted) window.location.reload();
+      });
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
