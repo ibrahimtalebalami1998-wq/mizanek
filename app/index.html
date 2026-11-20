@@ -81,6 +81,8 @@ add('page',[location.href.replace(/code=[^&]+/,'code=…')+' standalone='+naviga
     // Safari freezes a page it keeps for Back with its workers and their Web
     // Locks still held, so the next page waits forever on the database lock.
     (function () {
+      // A shared worker outlives the page; without one PowerSync syncs in the page.
+      delete window.SharedWorker;
       var workers = [];
       var NativeWorker = window.Worker;
       // Same Worker, only remembered, so pagehide can end it.
