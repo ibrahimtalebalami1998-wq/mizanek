@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mizanek log</title>
+<style>body{background:#18181C;color:#eee;font:13px/1.4 ui-monospace,monospace;margin:16px}button{font-size:16px;padding:10px 16px;margin:0 8px 12px 0}pre{white-space:pre-wrap;word-break:break-all}</style></head>
+<body><button id="c">Copy log</button><button id="x">Clear log</button><pre id="o"></pre>
+<script>
+var L=[];try{L=JSON.parse(localStorage.getItem('__mblog')||'[]')}catch(e){}
+var head=['ua '+navigator.userAgent,'standalone '+navigator.standalone,'opfs '+!!(navigator.storage&&navigator.storage.getDirectory),'sharedworker '+(typeof SharedWorker),'locks '+!!navigator.locks];
+var text=head.concat(L).join('\n');document.getElementById('o').textContent=text;
+document.getElementById('c').onclick=function(){navigator.clipboard.writeText(text).then(function(){alert('Copied')},function(){alert('Copy failed: select the text by hand')})};
+document.getElementById('x').onclick=function(){localStorage.removeItem('__mblog');location.reload()};
+</script></body></html>
