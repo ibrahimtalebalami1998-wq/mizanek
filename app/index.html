@@ -94,6 +94,17 @@
       });
     })();
   </script>
+  <script>
+    // The offline worker (sw.js) caches this build once the page has loaded,
+    // so the next start opens without internet. Its own updates skip the HTTP
+    // cache, so a new publish is seen on the next online start.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+          .catch(function () {});
+      });
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
