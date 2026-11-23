@@ -97,13 +97,45 @@
   <script>
     // The offline worker (sw.js) caches this build once the page has loaded,
     // so the next start opens without internet. Its own updates skip the HTTP
-    // cache, so a new publish is seen on the next online start.
-    if ('serviceWorker' in navigator) {
+    // cache, so a new publish is seen on the next online start or return.
+    (function () {
+      if (!('serviceWorker' in navigator)) return;
       window.addEventListener('load', function () {
         navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
           .catch(function () {});
       });
-    }
+      // A new build taking over this page leaves it running the old one, so
+      // it reloads onto the new one when the user comes back to it, at a main
+      // tab (WebBackHistory's {mb: depth} entry, 0 or none) with no text being
+      // edited (Flutter's editing element focused); else at a later return.
+      // The first install taking an uncontrolled page is not a new build.
+      var controller = navigator.serviceWorker.controller;
+      var updateReady = false;
+      var editedWhenHidden = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (controller) updateReady = true;
+        controller = navigator.serviceWorker.controller;
+      });
+      function editing() {
+        var focused = document.activeElement;
+        return !!focused && (focused.tagName === 'INPUT'
+          || focused.tagName === 'TEXTAREA' || focused.isContentEditable);
+      }
+      document.addEventListener('visibilitychange', function () {
+        // Flutter ends text editing once the page loses focus, so by the
+        // return the field has let go; ask while the page is being hidden.
+        if (document.visibilityState === 'hidden') return void (editedWhenHidden = editing());
+        var state = window.history.state;
+        var depth = state && typeof state.mb === 'number' ? state.mb : 0;
+        // The reload goes through pagehide, which ends the database worker.
+        if (updateReady && depth === 0 && !editedWhenHidden && !editing()) {
+          return window.location.reload();
+        }
+        navigator.serviceWorker.getRegistration()
+          .then(function (registration) { if (registration) return registration.update(); })
+          .catch(function () {});
+      });
+    })();
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
