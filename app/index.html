@@ -95,24 +95,50 @@
     })();
   </script>
   <script>
-    // The offline worker (sw.js) caches this build once the page has loaded,
-    // so the next start opens without internet. Its own updates skip the HTTP
-    // cache, so a new publish is seen on the next online start or return.
+    // The offline worker (sw.js) caches this build once the app has shown its
+    // first frame, so its downloads never compete with the first start (the
+    // files it asks for are then answered from the HTTP cache). It saves only
+    // this browser's engine, named in its URL. From the second start the app
+    // opens from the saved copy and never waits on the network.
     (function () {
       if (!('serviceWorker' in navigator)) return;
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+      var STUCK_START_MS = 20000;
+      var firstFrame = false;
+      // A page still on the logo after this long is stuck, not starting.
+      function started() { return firstFrame || performance.now() > STUCK_START_MS; }
+      function register() {
+        var prefix = new URL('canvaskit/', document.baseURI).href;
+        var engine = '';
+        performance.getEntriesByType('resource').some(function (entry) {
+          var url = entry.name.split(/[?#]/)[0];
+          if (url.indexOf(prefix) !== 0 || !/\.wasm$/.test(url)) return false;
+          engine = 'canvaskit/' + url.slice(prefix.length);
+          return true;
+        });
+        var script = engine ? 'sw.js?engine=' + encodeURIComponent(engine) : 'sw.js';
+        navigator.serviceWorker.register(script, { updateViaCache: 'none' })
           .catch(function () {});
+      }
+      window.addEventListener('flutter-first-frame', function () {
+        firstFrame = true;
+        performance.mark('flutter-first-frame');
+        register();
       });
-      // A new build taking over this page leaves it running the old one, so
-      // it reloads onto the new one when the user comes back to it, at a main
-      // tab (WebBackHistory's {mb: depth} entry, 0 or none) with no text being
-      // edited (Flutter's editing element focused); else at a later return.
-      // The first install taking an uncontrolled page is not a new build.
+      // A new build waits in the background (no skipWaiting at install). It
+      // takes over at the next cold start, or here, on a return to the page at
+      // a main tab (WebBackHistory's {mb: depth} entry, 0 or none) with no text
+      // being edited (Flutter's editing element focused) and after the first
+      // frame; else at a later return. The first install taking an
+      // uncontrolled page is not a new build.
       var controller = navigator.serviceWorker.controller;
       var updateReady = false;
+      // The waiting worker this page asked to take over, just checked as safe.
+      var asked = null;
       var editedWhenHidden = false;
       navigator.serviceWorker.addEventListener('controllerchange', function () {
+        // Only the worker it asked: if that one turned redundant (a newer
+        // publish), another tab's take-over must not reload this page now.
+        if (asked && navigator.serviceWorker.controller === asked) return window.location.reload();
         if (controller) updateReady = true;
         controller = navigator.serviceWorker.controller;
       });
@@ -127,13 +153,18 @@
         if (document.visibilityState === 'hidden') return void (editedWhenHidden = editing());
         var state = window.history.state;
         var depth = state && typeof state.mb === 'number' ? state.mb : 0;
-        // The reload goes through pagehide, which ends the database worker.
-        if (updateReady && depth === 0 && !editedWhenHidden && !editing()) {
-          return window.location.reload();
-        }
-        navigator.serviceWorker.getRegistration()
-          .then(function (registration) { if (registration) return registration.update(); })
-          .catch(function () {});
+        var ready = depth === 0 && !editedWhenHidden && !editing() && started();
+        // Another tab already took the new build over: this page runs the old
+        // one. The reload goes through pagehide, which ends the database worker.
+        if (ready && updateReady) return window.location.reload();
+        navigator.serviceWorker.getRegistration().then(function (registration) {
+          if (!registration) return;
+          if (ready && registration.waiting && navigator.serviceWorker.controller) {
+            asked = registration.waiting;
+            return asked.postMessage({ type: 'mizanek-take-over' });
+          }
+          return registration.update();
+        }).catch(function () {});
       });
     })();
   </script>
